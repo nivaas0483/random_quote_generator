@@ -26,8 +26,8 @@ void printList(struct Node* head) {
     printf("\n");
 }
 
-// Function to serialize the linked list and save it to a file
-void serializeAndSave(struct Node* head, const char* filename) {
+// Function to serialize the linked list and save it to a file (sorted mode)
+void serializeAndSaveSorted(struct Node* head, const char* filename) {
     FILE* file = fopen(filename, "w");
     if (file == NULL) {
         printf("Error opening file for writing\n");
@@ -36,18 +36,15 @@ void serializeAndSave(struct Node* head, const char* filename) {
 
     struct Node* current = head;
     while (current != NULL) {
-        fprintf(file, "%d", current->data);
-        if (current->next != NULL) {
-            fprintf(file, ",");
-        }
+        fprintf(file, "%d\n", current->data);
         current = current->next;
     }
 
     fclose(file);
 }
 
-// Function to deserialize the linked list from a file
-struct Node* deserializeFromFile(const char* filename) {
+// Function to deserialize the linked list from a file (sorted mode)
+struct Node* deserializeFromFileSorted(const char* filename) {
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
         printf("Error opening file for reading\n");
@@ -56,12 +53,8 @@ struct Node* deserializeFromFile(const char* filename) {
 
     struct Node* head = NULL;
     struct Node* tail = NULL;
-    const char* delimiter = ",";
-    char buffer[100]; // Adjust the size as needed
-    fgets(buffer, sizeof(buffer), file);
-    char* token = strtok(buffer, delimiter);
-    while (token != NULL) {
-        int data = atoi(token);
+    int data;
+    while (fscanf(file, "%d", &data) != EOF) {
         struct Node* newNode = createNode(data);
         if (head == NULL) {
             head = newNode;
@@ -70,7 +63,49 @@ struct Node* deserializeFromFile(const char* filename) {
             tail->next = newNode;
             tail = tail->next;
         }
-        token = strtok(NULL, delimiter);
+    }
+
+    fclose(file);
+    return head;
+}
+
+// Function to serialize the linked list and save it to a file (unsorted mode)
+void serializeAndSaveUnsorted(struct Node* head, const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (file == NULL) {
+        printf("Error opening file for writing\n");
+        return;
+    }
+
+    struct Node* current = head;
+    while (current != NULL) {
+        fprintf(file, "%d\n", current->data);
+        current = current->next;
+    }
+
+    fclose(file);
+}
+
+// Function to deserialize the linked list from a file (unsorted mode)
+struct Node* deserializeFromFileUnsorted(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Error opening file for reading\n");
+        return NULL;
+    }
+
+    struct Node* head = NULL;
+    struct Node* tail = NULL;
+    int data;
+    while (fscanf(file, "%d", &data) != EOF) {
+        struct Node* newNode = createNode(data);
+        if (head == NULL) {
+            head = newNode;
+            tail = newNode;
+        } else {
+            tail->next = newNode;
+            tail = tail->next;
+        }
     }
 
     fclose(file);
