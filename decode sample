@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char *encoded_data = argv[1];
+    const char *encoded_data = argv[1];
     struct Person decoded_person;
 
     // Decode the encoded data
