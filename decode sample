@@ -1,57 +1,34 @@
-#include <stdio.h>
-#include <string.h>
-
-// Define the structure for person information
-struct Person {
-    char name[20];
-    int age;
-    float height;
-};
-
-// Function to decode person information using CDR
 void decode_person(const char *encoded_data, struct Person *person) {
-    int offset = 0;
+    printf("Encoded data: %s\n", encoded_data); // Debug: Print encoded data
 
-    // Decode name field (Type: 0x01)
-    if (encoded_data[offset] == 0x01) {
-        int name_length = encoded_data[offset + 1];
-        memcpy(person->name, &encoded_data[offset + 2], name_length);
-        person->name[name_length] = '\0';
-        offset += 2 + name_length;
+    // Ensure encoded data is not empty
+    if (strlen(encoded_data) < 1) {
+        printf("Error: Invalid encoded data\n");
+        return;
     }
 
-    // Decode age field (Type: 0x02)
-    if (encoded_data[offset] == 0x02) {
-        int age_length = encoded_data[offset + 1];
-        memcpy(&person->age, &encoded_data[offset + 2], age_length);
-        offset += 2 + age_length;
+    // Decode name length
+    int name_length = encoded_data[0];
+    printf("Name length: %d\n", name_length); // Debug: Print name length
+
+    // Ensure name length does not exceed encoded data length
+    if (name_length + 1 >= strlen(encoded_data)) {
+        printf("Error: Invalid name length\n");
+        return;
     }
 
-    // Decode height field (Type: 0x03)
-    if (encoded_data[offset] == 0x03) {
-        int height_length = encoded_data[offset + 1];
-        memcpy(&person->height, &encoded_data[offset + 2], height_length);
-        offset += 2 + height_length;
+    // Decode name
+    memcpy(person->name, &encoded_data[1], name_length);
+    person->name[name_length] = '\0'; // Null-terminate the string
+    printf("Decoded name: %s\n", person->name); // Debug: Print decoded name
+
+    // Decode age
+    int age_offset = name_length + 1;
+    if (age_offset + sizeof(int) <= strlen(encoded_data)) {
+        memcpy(&person->age, &encoded_data[age_offset], sizeof(int));
+    } else {
+        printf("Error: Invalid age length\n");
+        return;
     }
-}
-
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("Usage: %s <encoded_data>\n", argv[0]);
-        return 1;
-    }
-
-    const char *encoded_data = argv[1];
-    struct Person decoded_person;
-
-    // Decode the encoded data
-    decode_person(encoded_data, &decoded_person);
-
-    // Print the decoded person's information
-    printf("Decoded Person Information:\n");
-    printf("Name: %s\n", decoded_person.name);
-    printf("Age: %d\n", decoded_person.age);
-    printf("Height: %.1f\n", decoded_person.height);
-
-    return 0;
+    printf("Decoded age: %d\n", person->age); // Debug: Print decoded age
 }
