@@ -7,26 +7,6 @@
 #define PORT 12345
 #define BUFFER_SIZE 1024
 
-// Function to encode data (in this case, simply reverse the string)
-void encode_data(char *data) {
-    int length = strlen(data);
-    for (int i = 0; i < length / 2; ++i) {
-        char temp = data[i];
-        data[i] = data[length - i - 1];
-        data[length - i - 1] = temp;
-    }
-}
-
-// Function to decode data (in this case, simply reverse the string)
-void decode_data(char *data) {
-    int length = strlen(data);
-    for (int i = 0; i < length / 2; ++i) {
-        char temp = data[i];
-        data[i] = data[length - i - 1];
-        data[length - i - 1] = temp;
-    }
-}
-
 int main() {
     int server_fd, new_socket;
     struct sockaddr_in address;
@@ -76,9 +56,6 @@ int main() {
         }
         buffer[bytes_received] = '\0';
 
-        // Decode the received data
-        decode_data(buffer);
-
         // Display the received data
         printf("Received data from client: %s\n", buffer);
 
@@ -87,10 +64,7 @@ int main() {
         fgets(buffer, BUFFER_SIZE, stdin);
         buffer[strcspn(buffer, "\n")] = '\0';  // Remove newline character
 
-        // Encode the data before sending
-        encode_data(buffer);
-
-        // Send the encoded data back to the client
+        // Send the data back to the client
         send(new_socket, buffer, strlen(buffer), 0);
     }
 
