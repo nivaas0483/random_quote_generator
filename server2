@@ -1,0 +1,78 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+#define PORT 12345
+#define BUFFER_SIZE 1024
+
+// Function to encode data (example: simply reversing the string)
+void encode_data(char *data) {
+    int length = strlen(data);
+    for (int i = 0; i < length / 2; ++i) {
+        char temp = data[i];
+        data[i] = data[length - i - 1];
+        data[length - i - 1] = temp;
+    }
+}
+
+int main() {
+    int server_fd, new_socket;
+    struct sockaddr_in address;
+    int opt = 1;
+    int addrlen = sizeof(address);
+    char buffer[BUFFER_SIZE] = {0};
+
+    // Create socket file descriptor
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Forcefully attaching socket to the port
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(PORT);
+
+    // Bind the socket to localhost port 12345
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for incoming connections
+    if (listen(server_fd, 3) < 0) {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+
+    // Accept incoming connection
+    if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
+        perror("accept");
+        exit(EXIT_FAILURE);
+    }
+
+    // Prompt the user to enter the data
+    printf("Enter the data to be encoded: ");
+    fgets(buffer, BUFFER_SIZE, stdin);
+    // Remove trailing newline character
+    buffer[strcspn(buffer, "\n")] = '\0';
+
+    // Encode the received data
+    encode_data(buffer);
+
+    // Send the encoded data back to the client
+    send(new_socket, buffer, strlen(buffer), 0);
+    printf("Encoded data sent to client: %s\n", buffer);
+
+    // Close the socket
+    close(new_socket);
+    close(server_fd);
+
+    return 0;
+}
