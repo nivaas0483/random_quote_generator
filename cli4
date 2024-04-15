@@ -3,44 +3,26 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <openssl/aes.h>
+#include <openssl/aes.h> // Include OpenSSL library for AES encryption
 
-#define PORT 12345
-#define BUFFER_SIZE 1024
-#define AES_KEY_SIZE 128
-#define AES_BLOCK_SIZE 16
+#define PORT 12345        // Port number for communication
+#define BUFFER_SIZE 1024  // Size of the buffer for sending and receiving data
+#define AES_KEY_SIZE 256  // Size of the AES encryption key (256 bits)
 
-unsigned char aes_key[AES_KEY_SIZE / 8];
-
-void generate_aes_key() {
-    // Generate the same AES key as the server
-    // In a real-world scenario, the client would receive the key securely from the server
-    // For simplicity, we're generating the same key here
-    // In practice, this key exchange would be performed securely using protocols like Diffie-Hellman or public key cryptography
-    // For demonstration purposes, we're just using a hardcoded key
-    // This is insecure and should not be used in production
-    unsigned char key[] = "0123456789abcdef";
-    memcpy(aes_key, key, sizeof(key));
-}
-
-void decrypt_aes(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext, unsigned char *iv) {
+// Function to decrypt data using AES
+void decrypt_aes(const unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext, unsigned char *aes_key) {
     AES_KEY key;
-    if (AES_set_decrypt_key(aes_key, AES_KEY_SIZE, &key) < 0) {
-        perror("Failed to set AES decryption key");
-        exit(EXIT_FAILURE);
-    }
-
-    AES_cbc_encrypt(ciphertext, plaintext, ciphertext_len, &key, iv, AES_DECRYPT);
+    AES_set_decrypt_key(aes_key, AES_KEY_SIZE, &key); // Set the decryption key
+    AES_decrypt(ciphertext, plaintext, &key);         // Decrypt the ciphertext
 }
 
 int main() {
-    int sock = 0;
-    struct sockaddr_in serv_addr;
-    char buffer[BUFFER_SIZE] = {0};
-    unsigned char iv[AES_BLOCK_SIZE];
+    int sock = 0;                        // Socket file descriptor
+    struct sockaddr_in serv_addr;        // Server address structure
+    unsigned char aes_key[AES_KEY_SIZE / 8]; // AES encryption key
 
-    // Generate AES key
-    generate_aes_key();
+    // Generate a random AES key
+    RAND_bytes(aes_key, sizeof(aes_key));
 
     // Create a socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -48,11 +30,10 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
-
-    // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+    // Set up the server address structure
+    serv_addr.sin_family = AF_INET;                  // IPv4
+    serv_addr.sin_port = htons(PORT);                // Port number
+    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) { // Convert IP address from text to binary
         perror("invalid address");
         exit(EXIT_FAILURE);
     }
@@ -63,36 +44,34 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    // Main loop for sending and receiving data
     while (1) {
-        // Receive encrypted data from server
-        ssize_t bytes_received;
-        if ((bytes_received = recv(sock, buffer, BUFFER_SIZE, 0)) < 0) {
-            perror("recv failed");
-            exit(EXIT_FAILURE);
-        }
-        buffer[bytes_received] = '\0';
+        unsigned char plaintext[BUFFER_SIZE];    // Buffer for storing plaintext data
+        unsigned char ciphertext[BUFFER_SIZE];   // Buffer for storing encrypted data
+        int bytes_received;                      // Number of bytes received from the server
 
-        // Receive IV from server
-        unsigned char received_iv[AES_BLOCK_SIZE];
-        if (recv(sock, received_iv, AES_BLOCK_SIZE, 0) < 0) {
-            perror("recv failed");
-            exit(EXIT_FAILURE);
-        }
-
-        // Decrypt the received data
-        unsigned char decrypted_buffer[BUFFER_SIZE];
-        decrypt_aes(buffer, bytes_received, decrypted_buffer, received_iv);
-
-        // Display the decrypted data
-        printf("Received data from server: %s\n", decrypted_buffer);
-
-        // Prompt for input from client side
+        // Prompt for input from the client
         printf("Enter the data to send: ");
-        fgets(buffer, BUFFER_SIZE, stdin);
-        buffer[strcspn(buffer, "\n")] = '\0';  // Remove newline character
+        fgets(plaintext, BUFFER_SIZE, stdin);     // Read input from the user
+        plaintext[strcspn(plaintext, "\n")] = '\0'; // Remove newline character
 
-        // Send the data to the server
-        send(sock, buffer, strlen(buffer), 0);
+        // Send the plaintext data to the server
+        if (send(sock, plaintext, strlen(plaintext), 0) < 0) {
+            perror("send failed");
+            exit(EXIT_FAILURE);
+        }
+
+        // Receive encrypted data from the server
+        if ((bytes_received = recv(sock, ciphertext, BUFFER_SIZE, 0)) < 0) {
+            perror("recv failed");
+            exit(EXIT_FAILURE);
+        }
+
+        // Decrypt the received ciphertext
+        decrypt_aes(ciphertext, bytes_received, plaintext, aes_key);
+
+        // Display the received plaintext data
+        printf("Received data from server: %s\n", plaintext);
     }
 
     // Close the socket
