@@ -3,32 +3,17 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <openssl/rand.h>
 #include <openssl/aes.h>
 
 #define PORT 12345
 #define BUFFER_SIZE 1024
-#define AES_KEY_SIZE 128
-#define AES_BLOCK_SIZE 16
+#define AES_KEY_SIZE 256
 
-unsigned char aes_key[AES_KEY_SIZE / 8];
-
-void generate_aes_key() {
-    // Generate a random AES key
-    if (!RAND_bytes(aes_key, sizeof(aes_key))) {
-        perror("Failed to generate AES key");
-        exit(EXIT_FAILURE);
-    }
-}
-
-void encrypt_aes(const unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext, unsigned char *iv) {
+// Function to encrypt data using AES
+void encrypt_aes(const unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext, unsigned char *aes_key) {
     AES_KEY key;
-    if (AES_set_encrypt_key(aes_key, AES_KEY_SIZE, &key) < 0) {
-        perror("Failed to set AES encryption key");
-        exit(EXIT_FAILURE);
-    }
-    
-    AES_cbc_encrypt(plaintext, ciphertext, plaintext_len, &key, iv, AES_ENCRYPT);
+    AES_set_encrypt_key(aes_key, AES_KEY_SIZE, &key);
+    AES_encrypt(plaintext, ciphertext, &key);
 }
 
 int main() {
@@ -36,11 +21,10 @@ int main() {
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
-    char buffer[BUFFER_SIZE] = {0};
-    unsigned char iv[AES_BLOCK_SIZE];
+    unsigned char aes_key[AES_KEY_SIZE / 8]; // 256-bit AES key
 
-    // Generate AES key
-    generate_aes_key();
+    // Generate a random AES key
+    RAND_bytes(aes_key, sizeof(aes_key));
 
     // Create a socket
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -58,7 +42,7 @@ int main() {
     address.sin_port = htons(PORT);
 
     // Bind the socket to the port
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address))<0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
@@ -76,27 +60,24 @@ int main() {
     }
 
     while (1) {
+        unsigned char plaintext[BUFFER_SIZE];
+        unsigned char ciphertext[BUFFER_SIZE];
+        int bytes_received;
+
         // Receive data from client
-        ssize_t bytes_received;
-        if ((bytes_received = recv(new_socket, buffer, BUFFER_SIZE, 0)) < 0) {
+        if ((bytes_received = recv(new_socket, plaintext, BUFFER_SIZE, 0)) < 0) {
             perror("recv failed");
             exit(EXIT_FAILURE);
         }
-        buffer[bytes_received] = '\0';
 
-        // Generate a random IV
-        if (!RAND_bytes(iv, sizeof(iv))) {
-            perror("Failed to generate IV");
+        // Encrypt the received data
+        encrypt_aes(plaintext, bytes_received, ciphertext, aes_key);
+
+        // Send the encrypted data back to the client
+        if (send(new_socket, ciphertext, bytes_received, 0) < 0) {
+            perror("send failed");
             exit(EXIT_FAILURE);
         }
-
-        // Encrypt the data
-        unsigned char encrypted_buffer[BUFFER_SIZE];
-        encrypt_aes(buffer, strlen(buffer), encrypted_buffer, iv);
-
-        // Send the encrypted data and IV to the client
-        send(new_socket, encrypted_buffer, strlen(buffer), 0);
-        send(new_socket, iv, AES_BLOCK_SIZE, 0);
     }
 
     // Close the socket
