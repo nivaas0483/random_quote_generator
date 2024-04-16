@@ -9,14 +9,11 @@
 #define BUFFER_SIZE 1024
 
 int main() {
-    unsigned char key[crypto_secretbox_KEYBYTES];
-    unsigned char nonce[crypto_secretbox_NONCEBYTES];
     if (sodium_init() == -1) {
         fprintf(stderr, "Error initializing libsodium\n");
         exit(EXIT_FAILURE);
     }
-    crypto_secretbox_keygen(key);
-    
+
     int sock = 0;
     struct sockaddr_in serv_addr;
     unsigned char buffer[BUFFER_SIZE] = {0};
@@ -44,22 +41,24 @@ int main() {
 
     while (1) {
         // Receive nonce from server
-        unsigned char received_nonce[crypto_secretbox_NONCEBYTES];
-        if (recv(sock, received_nonce, sizeof(received_nonce), 0) < 0) {
+        unsigned char nonce[crypto_secretbox_NONCEBYTES];
+        if (recv(sock, nonce, sizeof(nonce), 0) < 0) {
             perror("recv nonce failed");
             exit(EXIT_FAILURE);
         }
 
         // Receive encrypted data from server
-        unsigned char received_ciphertext[BUFFER_SIZE + crypto_secretbox_MACBYTES];
-        if (recv(sock, received_ciphertext, sizeof(received_ciphertext), 0) < 0) {
+        unsigned char ciphertext[BUFFER_SIZE + crypto_secretbox_MACBYTES];
+        if (recv(sock, ciphertext, sizeof(ciphertext), 0) < 0) {
             perror("recv ciphertext failed");
             exit(EXIT_FAILURE);
         }
 
         // Decrypt the received data
         unsigned char decrypted[BUFFER_SIZE];
-        if (crypto_secretbox_open_easy(decrypted, received_ciphertext, sizeof(received_ciphertext), received_nonce, key) != 0) {
+        unsigned char key[crypto_secretbox_KEYBYTES];
+        memcpy(key, "12345", crypto_secretbox_KEYBYTES);
+        if (crypto_secretbox_open_easy(decrypted, ciphertext, sizeof(ciphertext), nonce, key) != 0) {
             fprintf(stderr, "Decryption failed\n");
             exit(EXIT_FAILURE);
         }
