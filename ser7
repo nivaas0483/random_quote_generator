@@ -9,14 +9,11 @@
 #define BUFFER_SIZE 1024
 
 int main() {
-    unsigned char key[crypto_secretbox_KEYBYTES];
-    unsigned char nonce[crypto_secretbox_NONCEBYTES];
     if (sodium_init() == -1) {
         fprintf(stderr, "Error initializing libsodium\n");
         exit(EXIT_FAILURE);
     }
-    crypto_secretbox_keygen(key);
-    
+
     int server_fd, new_socket;
     struct sockaddr_in address;
     int opt = 1;
@@ -64,6 +61,9 @@ int main() {
 
         // Encrypt the data
         unsigned char ciphertext[BUFFER_SIZE + crypto_secretbox_MACBYTES];
+        unsigned char nonce[crypto_secretbox_NONCEBYTES];
+        unsigned char key[crypto_secretbox_KEYBYTES];
+        memcpy(key, "12345", crypto_secretbox_KEYBYTES);
         randombytes_buf(nonce, sizeof(nonce));
         if (crypto_secretbox_easy(ciphertext, (unsigned char *)buffer, strlen(buffer), nonce, key) != 0) {
             fprintf(stderr, "Encryption failed\n");
