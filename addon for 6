@@ -1,0 +1,27 @@
+ser
+// Concatenate nonce and ciphertext
+unsigned char encrypted_data[sizeof(nonce) + sizeof(ciphertext)];
+memcpy(encrypted_data, nonce, sizeof(nonce));
+memcpy(encrypted_data + sizeof(nonce), ciphertext, sizeof(ciphertext));
+
+// Send the encrypted data back to the client
+send(new_socket, encrypted_data, sizeof(encrypted_data), 0);
+
+cli
+// Receive encrypted data from server
+unsigned char encrypted_data[sizeof(nonce) + sizeof(ciphertext)];
+if (recv(sock, encrypted_data, sizeof(encrypted_data), 0) < 0) {
+    perror("recv encrypted data failed");
+    exit(EXIT_FAILURE);
+}
+
+// Split the received data into nonce and ciphertext
+unsigned char *received_nonce = encrypted_data;
+unsigned char *received_ciphertext = encrypted_data + sizeof(nonce);
+
+// Decrypt the received data
+unsigned char decrypted[BUFFER_SIZE];
+if (crypto_secretbox_open_easy(decrypted, received_ciphertext, sizeof(ciphertext), received_nonce, (const unsigned char *)"01234567890123456789012345678901") != 0) {
+    fprintf(stderr, "Decryption failed\n");
+    exit(EXIT_FAILURE);
+}
