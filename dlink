@@ -105,6 +105,59 @@ int main() {
                 // Unsorted Data Mode
                 printf("\nUnsorted Data Mode Operations:\n");
                 // Implement similar menu-driven logic for unsorted data mode
+case 2:
+    // Unsorted Data Mode
+    printf("\nUnsorted Data Mode Operations:\n");
+    printf("1. Add a node at the beginning\n");
+    printf("2. Add a node at a particular position\n");
+    printf("3. Add a node at the end\n");
+    printf("4. Delete all occurrences of a node with a given value\n");
+    printf("5. Delete a node at a particular position\n");
+    printf("6. Print the linked list\n");
+    printf("7. Exit\n");
+    printf("Enter your choice: ");
+    scanf("%d", &operation_choice);
+
+    switch (operation_choice) {
+        case 1:
+            printf("Enter data to insert at the beginning: ");
+            scanf("%d", &data);
+            insert_at_beginning(&head, data);
+            break;
+        case 2:
+            printf("Enter position to insert: ");
+            scanf("%d", &position);
+            printf("Enter data to insert at position %d: ", position);
+            scanf("%d", &data);
+            insert_at_position(&head, position, data);
+            break;
+        case 3:
+            printf("Enter data to insert at the end: ");
+            scanf("%d", &data);
+            insert_at_end(&head, data);
+            break;
+        case 4:
+            printf("Enter key to delete: ");
+            scanf("%d", &key);
+            delete_occurrences_unsorted(&head, key);
+            break;
+        case 5:
+            printf("Enter position to delete: ");
+            scanf("%d", &position);
+            delete_at_position_unsorted(&head, position);
+            break;
+        case 6:
+            printf("Linked List: ");
+            print_list(head);
+            break;
+        case 7:
+            printf("Exiting Unsorted Data Mode...\n");
+            break;
+        default:
+            printf("Invalid choice!\n");
+            break;
+    }
+    break;
                 break;
 
             case 3:
