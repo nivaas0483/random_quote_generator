@@ -1,0 +1,124 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <dlfcn.h>
+
+// Node structure
+struct Node {
+    int data;
+    struct Node* next;
+};
+
+// Function pointer types for functions in the shared library
+typedef struct Node* (*CreateNodeFunction)(int data);
+typedef void (*PrintListFunction)(struct Node* head);
+typedef void (*InsertSortedFunction)(struct Node** head, int data);
+typedef void (*DeleteOccurrencesFunction)(struct Node** head, int key);
+typedef void (*DeleteAtPositionFunction)(struct Node** head, int position);
+typedef void (*InsertAtBeginningFunction)(struct Node** head, int data);
+typedef void (*InsertAtPositionFunction)(struct Node** head, int position, int data);
+typedef void (*InsertAtEndFunction)(struct Node** head, int data);
+typedef void (*DeleteOccurrencesUnsortedFunction)(struct Node** head, int key);
+typedef void (*DeleteAtPositionUnsortedFunction)(struct Node** head, int position);
+
+int main() {
+    struct Node* head = NULL;
+    int mode_choice, operation_choice, data, key, position;
+
+    // Load the shared library dynamically
+    void* library_handle = dlopen("./linkedlist_functions.so", RTLD_LAZY);
+    if (!library_handle) {
+        fprintf(stderr, "Error loading shared library: %s\n", dlerror());
+        return 1;
+    }
+
+    // Get function pointers from the shared library
+    CreateNodeFunction create_node = (CreateNodeFunction)dlsym(library_handle, "createNode");
+    PrintListFunction print_list = (PrintListFunction)dlsym(library_handle, "printList");
+    InsertSortedFunction insert_sorted = (InsertSortedFunction)dlsym(library_handle, "insertSorted");
+    DeleteOccurrencesFunction delete_occurrences = (DeleteOccurrencesFunction)dlsym(library_handle, "deleteOccurrences");
+    DeleteAtPositionFunction delete_at_position = (DeleteAtPositionFunction)dlsym(library_handle, "deleteAtPosition");
+    InsertAtBeginningFunction insert_at_beginning = (InsertAtBeginningFunction)dlsym(library_handle, "insertAtBeginning");
+    InsertAtPositionFunction insert_at_position = (InsertAtPositionFunction)dlsym(library_handle, "insertAtPosition");
+    InsertAtEndFunction insert_at_end = (InsertAtEndFunction)dlsym(library_handle, "insertAtEnd");
+    DeleteOccurrencesUnsortedFunction delete_occurrences_unsorted = (DeleteOccurrencesUnsortedFunction)dlsym(library_handle, "deleteOccurrencesUnsorted");
+    DeleteAtPositionUnsortedFunction delete_at_position_unsorted = (DeleteAtPositionUnsortedFunction)dlsym(library_handle, "deleteAtPositionUnsorted");
+
+    if (!create_node || !print_list || !insert_sorted || !delete_occurrences || !delete_at_position ||
+        !insert_at_beginning || !insert_at_position || !insert_at_end || !delete_occurrences_unsorted ||
+        !delete_at_position_unsorted) {
+        fprintf(stderr, "Error getting function pointers: %s\n", dlerror());
+        dlclose(library_handle);
+        return 1;
+    }
+
+    // Menu-driven code
+    do {
+        printf("\nMenu:\n");
+        printf("1. Sorted Data Mode\n");
+        printf("2. Unsorted Data Mode\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &mode_choice);
+
+        switch (mode_choice) {
+            case 1:
+                // Sorted Data Mode
+                printf("\nSorted Data Mode Operations:\n");
+                printf("1. Add a node\n");
+                printf("2. Delete all occurrences of a node with a given value\n");
+                printf("3. Delete a node at a particular position\n");
+                printf("4. Print the linked list\n");
+                printf("5. Exit\n");
+                printf("Enter your choice: ");
+                scanf("%d", &operation_choice);
+
+                switch (operation_choice) {
+                    case 1:
+                        printf("Enter data to insert: ");
+                        scanf("%d", &data);
+                        insert_sorted(&head, data);
+                        break;
+                    case 2:
+                        printf("Enter key to delete: ");
+                        scanf("%d", &key);
+                        delete_occurrences(&head, key);
+                        break;
+                    case 3:
+                        printf("Enter position to delete: ");
+                        scanf("%d", &position);
+                        delete_at_position(&head, position);
+                        break;
+                    case 4:
+                        printf("Linked List: ");
+                        print_list(head);
+                        break;
+                    case 5:
+                        printf("Exiting Sorted Data Mode...\n");
+                        break;
+                    default:
+                        printf("Invalid choice!\n");
+                        break;
+                }
+                break;
+
+            case 2:
+                // Unsorted Data Mode
+                printf("\nUnsorted Data Mode Operations:\n");
+                // Implement similar menu-driven logic for unsorted data mode
+                break;
+
+            case 3:
+                printf("Exiting program...\n");
+                break;
+
+            default:
+                printf("Invalid choice!\n");
+                break;
+        }
+    } while (mode_choice != 3);
+
+    // Don't forget to close the shared library handle when done
+    dlclose(library_handle);
+
+    return 0;
+}
